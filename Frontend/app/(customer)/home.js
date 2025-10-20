@@ -118,7 +118,7 @@ const CustomerHome = () => {
         renderItem={({ item }) => (
           <View style={styles.itemContainer}>
             <Image
-              source={{ uri: `http://192.168.100.5:5000${item.image}` }}
+              source={{ uri: `http://Your_url_here:5000${item.image}` }}
               style={styles.itemImage}
             />
             <View style={styles.itemInfo}>
