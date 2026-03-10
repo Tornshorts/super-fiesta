@@ -1,73 +1,121 @@
 import React from "react";
 import { useRouter } from "expo-router";
-import { View, Text, TouchableOpacity, StyleSheet, Image } from "react-native";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Image,
+  Dimensions,
+  StatusBar,
+} from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { FontAwesome } from "@expo/vector-icons";
+import { COLORS, SHADOWS } from "../constants/theme";
+
+const { width } = Dimensions.get("window");
+
+// ────────────────────────────────────────────────
+// BACKGROUND IMAGE: Once you place your sunflower image at
+// ../assets/images/backgrounds/landing-bg.jpg
+// 1. Uncomment the import: import { ImageBackground } from "react-native";
+// 2. Replace <View style={styles.heroSection}> with:
+//    <ImageBackground source={require("../assets/images/backgrounds/landing-bg.jpg")}
+//      style={styles.heroSection} resizeMode="cover">
+// 3. Close with </ImageBackground> instead of </View>
+// ────────────────────────────────────────────────
 
 const Home = () => {
   const router = useRouter();
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Background gradient */}
-      <LinearGradient
-        colors={["#8BC34A", "#4CAF50"]}
-        style={StyleSheet.absoluteFill}
-      />
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" />
 
-      {/* Header logo and title */}
-      <View style={styles.header}>
-        <Image
-          source={require("../assets/images/icon.png")} // <-- replace with your logo
-          style={styles.logo}
+      {/* Hero section — gradient (swap to ImageBackground when bg image is added) */}
+      <View style={styles.heroSection}>
+        <LinearGradient
+          colors={[COLORS.primaryDark, COLORS.primary, "#2E7D32"]}
+          style={StyleSheet.absoluteFill}
         />
-        <Text style={styles.title}>Mkulima</Text>
-        <Text style={styles.subtitle}>
-          Buy and sell agrovet products from the comfort of your home
-        </Text>
+
+        <SafeAreaView style={styles.heroContent}>
+          <View style={styles.logoRow}>
+            <Image
+              source={require("../assets/images/icon.png")}
+              style={styles.logo}
+            />
+            <View>
+              <Text style={styles.brandName}>Mkulima</Text>
+              <Text style={styles.brandTagline}>Digital Agrovet Marketplace</Text>
+            </View>
+          </View>
+
+          <Text style={styles.heroTagline}>
+            Your digital agrovet marketplace — connecting{"\n"}Kenyan farmers with quality agri-inputs.
+          </Text>
+        </SafeAreaView>
       </View>
 
-      {/* Illustration */}
-      <View style={styles.illustrationContainer}>
-        <Image
-          source={{
-            uri: "https://cdn-icons-png.flaticon.com/512/7675/7675375.png",
-          }}
-          style={styles.illustration}
-        />
-      </View>
+      {/* Bottom section */}
+      <View style={styles.bottomSection}>
+        <Text style={styles.sectionTitle}>How are you using Mkulima?</Text>
+        <Text style={styles.sectionSubtitle}>Choose your role to get started</Text>
 
-      {/* Description */}
-      <View style={styles.descriptionContainer}>
-        <Text style={styles.description}>
-          Welcome to Agrovet Marketplace — a digital platform that connects
-          farmers, livestock owners, and agrovet shops. Customers can order
-          products anytime, and store owners can showcase and sell their
-          products effortlessly.
-        </Text>
-      </View>
-
-      {/* Action Buttons */}
-      <View style={styles.buttons}>
+        {/* Customer Role Card */}
         <TouchableOpacity
-          style={styles.button}
-          onPress={() =>
-            router.push({ pathname: "login", params: { role: "owner" } })
-          }
+          style={styles.roleCard}
+          onPress={() => router.push({ pathname: "login", params: { role: "customer" } })}
+          activeOpacity={0.85}
         >
-          <Text style={styles.buttonText}>I’m a Store Owner</Text>
+          <View style={[styles.roleIconCircle, { backgroundColor: COLORS.primaryLight }]}>
+            <Text style={{ fontSize: 28 }}>🛒</Text>
+          </View>
+          <View style={styles.roleTextContainer}>
+            <Text style={styles.roleTitle}>I'm a Customer</Text>
+            <Text style={styles.roleDescription}>
+              Buy seeds, feeds, fertilizers & more
+            </Text>
+          </View>
+          <FontAwesome name="chevron-right" size={16} color={COLORS.textMuted} />
         </TouchableOpacity>
 
+        {/* Store Owner Role Card */}
         <TouchableOpacity
-          style={[styles.button, styles.secondaryButton]}
-          onPress={() =>
-            router.push({ pathname: "login", params: { role: "customer" } })
-          }
+          style={[styles.roleCard, styles.ownerCard]}
+          onPress={() => router.push({ pathname: "login", params: { role: "owner" } })}
+          activeOpacity={0.85}
         >
-          <Text style={styles.secondaryButtonText}>I’m a Customer</Text>
+          <View style={[styles.roleIconCircle, { backgroundColor: "rgba(255,255,255,0.2)" }]}>
+            <Text style={{ fontSize: 28 }}>🏪</Text>
+          </View>
+          <View style={styles.roleTextContainer}>
+            <Text style={[styles.roleTitle, { color: "#FFF" }]}>I'm a Store Owner</Text>
+            <Text style={[styles.roleDescription, { color: "rgba(255,255,255,0.8)" }]}>
+              Manage your agrovet & reach more farmers
+            </Text>
+          </View>
+          <FontAwesome name="chevron-right" size={16} color="rgba(255,255,255,0.6)" />
         </TouchableOpacity>
+
+        {/* Trust Badges */}
+        <View style={styles.trustRow}>
+          <View style={styles.trustBadge}>
+            <FontAwesome name="check-circle" size={18} color={COLORS.primary} />
+            <Text style={styles.trustText}>Verified Stores</Text>
+          </View>
+          <View style={styles.trustBadge}>
+            <FontAwesome name="truck" size={16} color={COLORS.primary} />
+            <Text style={styles.trustText}>Fast Delivery</Text>
+          </View>
+          <View style={styles.trustBadge}>
+            <FontAwesome name="mobile-phone" size={20} color={COLORS.primary} />
+            <Text style={styles.trustText}>M-PESA Ready</Text>
+          </View>
+        </View>
       </View>
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -76,80 +124,116 @@ export default Home;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#E8F5E9",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 30,
+    backgroundColor: COLORS.background,
   },
-  header: {
+  // ---- Hero ----
+  heroSection: {
+    height: "45%",
+    justifyContent: "flex-end",
+  },
+  heroContent: {
+    paddingHorizontal: 24,
+    paddingBottom: 30,
+  },
+  logoRow: {
+    flexDirection: "row",
     alignItems: "center",
-    marginTop: 40,
-    paddingHorizontal: 20,
+    marginBottom: 16,
   },
   logo: {
-    width: 100,
-    height: 100,
-    marginBottom: 10,
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    marginRight: 12,
   },
-  title: {
-    fontSize: 32,
-    color: "#fff",
-    fontWeight: "bold",
-    textAlign: "center",
+  brandName: {
+    fontSize: 34,
+    fontWeight: "900",
+    color: "#FFF",
+    letterSpacing: 0.5,
   },
-  subtitle: {
-    color: "#f1f1f1",
-    fontSize: 16,
-    textAlign: "center",
-    marginTop: 6,
+  brandTagline: {
+    fontSize: 13,
+    color: COLORS.accent,
+    fontWeight: "600",
+    marginTop: 2,
   },
-  illustrationContainer: {
-    flex: 1,
-    justifyContent: "center",
-  },
-  illustration: {
-    width: 100,
-    height: 90,
-    resizeMode: "contain",
-  },
-  descriptionContainer: {
-    paddingHorizontal: 30,
-    marginTop: 10,
-  },
-  description: {
-    fontSize: 16,
-    color: "#fff",
-    textAlign: "center",
+  heroTagline: {
+    fontSize: 15,
+    color: "rgba(255,255,255,0.85)",
     lineHeight: 22,
+    fontWeight: "500",
   },
-  buttons: {
-    flexDirection: "column",
-    width: "85%",
-    alignItems: "center",
-    marginBottom: 0,
+  // ---- Bottom Section ----
+  bottomSection: {
+    flex: 1,
+    paddingHorizontal: 24,
+    paddingTop: 28,
   },
-  button: {
-    backgroundColor: "#2E7D32",
-    paddingVertical: 14,
-    borderRadius: 25,
+  sectionTitle: {
+    fontSize: 22,
+    fontWeight: "800",
+    color: COLORS.text,
+    textAlign: "center",
+    marginBottom: 6,
+  },
+  sectionSubtitle: {
+    fontSize: 14,
+    color: COLORS.textMuted,
+    textAlign: "center",
+    marginBottom: 24,
+  },
+  // ---- Role Cards ----
+  roleCard: {
+    flexDirection: "row",
     alignItems: "center",
+    backgroundColor: COLORS.card,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    ...SHADOWS.medium,
+  },
+  ownerCard: {
+    backgroundColor: COLORS.primary,
+  },
+  roleIconCircle: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     justifyContent: "center",
-    width: "100%",
-    marginBottom: 15,
+    alignItems: "center",
+    marginRight: 14,
   },
-  buttonText: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "bold",
+  roleTextContainer: {
+    flex: 1,
   },
-  secondaryButton: {
-    backgroundColor: "#fff",
-    borderWidth: 2,
-    borderColor: "#2E7D32",
+  roleTitle: {
+    fontSize: 17,
+    fontWeight: "700",
+    color: COLORS.text,
+    marginBottom: 3,
   },
-  secondaryButtonText: {
-    color: "#2E7D32",
-    fontSize: 18,
-    fontWeight: "bold",
+  roleDescription: {
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    lineHeight: 18,
+  },
+  // ---- Trust Badges ----
+  trustRow: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    marginTop: 24,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+  },
+  trustBadge: {
+    alignItems: "center",
+    gap: 6,
+  },
+  trustText: {
+    fontSize: 11,
+    color: COLORS.textSecondary,
+    fontWeight: "600",
   },
 });

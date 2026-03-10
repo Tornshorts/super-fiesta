@@ -40,7 +40,7 @@ const CustomerProfile = () => {
           onPress: async () => {
             try {
               await cancelOrder(orderId);
-              fetchOrders(); // Refresh the list
+              fetchOrders();
             } catch (err) {
               Alert.alert("Error", err.response?.data?.message || "Failed to cancel order.");
             }
@@ -56,62 +56,94 @@ const CustomerProfile = () => {
   );
 
   if (loading) {
-    return <ActivityIndicator size="large" style={styles.centered} />;
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" color="#1B5E20" />
+      </View>
+    );
   }
 
   if (error) {
-    return <Text style={[styles.centered, styles.error]}>{error}</Text>;
+    return (
+      <View style={styles.centered}>
+        <Text style={styles.errorText}>{error}</Text>
+      </View>
+    );
   }
 
+  const getStatusColor = (status) => {
+    const colors = {
+      pending: "#FF9800",
+      confirmed: "#2196F3",
+      shipped: "#3F51B5",
+      delivered: "#4CAF50",
+      cancelled: "#F44336",
+    };
+    return colors[status] || "#888";
+  };
+
   const renderOrderItem = ({ item }) => (
-    <View style={styles.orderContainer}>
-      <View style={styles.orderHeader}>
-        <Text style={styles.orderId}>Order #{item._id.substring(0, 8)}</Text>
-        <Text style={styles.orderDate}>
-          {new Date(item.createdAt).toLocaleDateString()}
-        </Text>
+    <View style={styles.card}>
+      <View style={styles.cardHeader}>
+        <Text style={styles.orderId}>#{item._id.substring(0, 8)}</Text>
+        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]}>
+          <Text style={styles.statusText}>
+            {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
+          </Text>
+        </View>
       </View>
-      <Text style={styles.shopName}>From: {item.shop.name}</Text>
+
+      <View style={styles.shopRow}>
+        <Text style={styles.shopLabel}>From</Text>
+        <Text style={styles.shopName}>{item.shop.name}</Text>
+      </View>
+      
+      <Text style={styles.dateText}>
+        {new Date(item.createdAt).toLocaleDateString()}
+      </Text>
+
+      <View style={styles.divider} />
 
       {item.items.map((product) => (
-        <View key={product._id} style={styles.productItem}>
-          <Text>
-            {product.name} (x{product.quantity})
+        <View key={product._id} style={styles.productRow}>
+          <Text style={styles.productName}>
+            {product.name} <Text style={styles.productQty}>×{product.quantity}</Text>
           </Text>
-          <Text>Ksh {product.price * product.quantity}</Text>
+          <Text style={styles.productPrice}>Ksh {product.price * product.quantity}</Text>
         </View>
       ))}
 
-      <View style={styles.orderFooter}>
-        <Text style={styles.totalAmount}>Total: Ksh {item.totalAmount}</Text>
-        <Text style={[styles.status, styles[`status_${item.status}`]]}>
-          {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
-        </Text>
+      <View style={styles.divider} />
+
+      <View style={styles.totalRow}>
+        <Text style={styles.totalLabel}>Total</Text>
+        <Text style={styles.totalAmount}>Ksh {item.totalAmount}</Text>
       </View>
 
       {item.status === "pending" && (
-        <View style={styles.actionsContainer}>
-          <TouchableOpacity
-            style={styles.cancelButton}
-            onPress={() => handleCancelOrder(item._id)}
-          >
-            <Text style={styles.cancelButtonText}>Cancel Order</Text>
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity
+          style={styles.cancelButton}
+          onPress={() => handleCancelOrder(item._id)}
+        >
+          <Text style={styles.cancelButtonText}>Cancel Order</Text>
+        </TouchableOpacity>
       )}
     </View>
   );
-  
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>My Orders</Text>
+      <Text style={styles.headerTitle}>My Orders</Text>
       <FlatList
         data={orders}
         renderItem={renderOrderItem}
         keyExtractor={(item) => item._id}
+        contentContainerStyle={styles.listContent}
         ListEmptyComponent={
-          <Text style={styles.centered}>You have no orders yet.</Text>
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>No orders yet</Text>
+            <Text style={styles.emptySubText}>Your order history will appear here</Text>
+          </View>
         }
       />
     </View>
@@ -119,63 +151,146 @@ const CustomerProfile = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: "#f8f9fa" },
-  centered: { flex: 1, textAlign: "center", marginTop: 50 },
-  title: { fontSize: 28, fontWeight: "bold", marginBottom: 20 },
-  error: { color: "red" },
-  orderContainer: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 15,
-    marginBottom: 15,
+  container: {
+    flex: 1,
+    backgroundColor: "#F5F5F0",
+    paddingTop: 50,
+  },
+  centered: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#F5F5F0",
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: "800",
+    color: "#1A1A1A",
+    marginHorizontal: 20,
+    marginBottom: 20,
+  },
+  listContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 100,
+  },
+  card: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
     elevation: 3,
   },
-  orderHeader: { flexDirection: "row", justifyContent: "space-between" },
-  orderId: { fontWeight: "bold", fontSize: 16 },
-  orderDate: { color: "#6c757d" },
-  shopName: { fontStyle: "italic", color: "#333", marginVertical: 8 },
-  productItem: {
+  cardHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  orderId: {
+    fontWeight: "700",
+    fontSize: 16,
+    color: "#1A1A1A",
+  },
+  statusBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 20,
+  },
+  statusText: {
+    color: "#FFF",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  shopRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  shopLabel: {
+    fontSize: 13,
+    color: "#999",
+    marginRight: 6,
+  },
+  shopName: {
+    fontSize: 14,
+    color: "#444",
+    fontWeight: "600",
+  },
+  dateText: {
+    fontSize: 12,
+    color: "#BDBDBD",
+    marginBottom: 10,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: "#F0F0F0",
+    marginVertical: 10,
+  },
+  productRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     paddingVertical: 4,
-    borderBottomWidth: 1,
-    borderBottomColor: "#eee",
   },
-  orderFooter: {
+  productName: {
+    fontSize: 14,
+    color: "#333",
+  },
+  productQty: {
+    color: "#999",
+  },
+  productPrice: {
+    fontSize: 14,
+    color: "#333",
+    fontWeight: "500",
+  },
+  totalRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginTop: 10,
+    alignItems: "center",
   },
-  totalAmount: { fontWeight: "bold", fontSize: 16 },
-  status: {
-    fontWeight: "bold",
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 10,
-    color: "#fff",
-    overflow: "hidden",
+  totalLabel: {
+    fontSize: 14,
+    color: "#888",
   },
-  status_pending: { backgroundColor: "#ffc107" },
-  status_confirmed: { backgroundColor: "#17a2b8" },
-  status_shipped: { backgroundColor: "#007bff" },
-  status_delivered: { backgroundColor: "#28a745" },
-  status_cancelled: { backgroundColor: "#dc3545" },
-  actionsContainer: {
-    marginTop: 10,
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: "#eee",
-    alignItems: "flex-end",
+  totalAmount: {
+    fontWeight: "800",
+    fontSize: 18,
+    color: "#1A1A1A",
   },
   cancelButton: {
-    backgroundColor: "#dc3545",
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 6,
+    marginTop: 12,
+    backgroundColor: "#FFEBEE",
+    paddingVertical: 10,
+    borderRadius: 12,
+    alignItems: "center",
   },
   cancelButtonText: {
-    color: "#fff",
-    fontWeight: "bold",
+    color: "#C62828",
+    fontWeight: "600",
+    fontSize: 14,
+  },
+  errorText: {
+    color: "#C62828",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  emptyContainer: {
+    alignItems: "center",
+    marginTop: 50,
+  },
+  emptyText: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#1A1A1A",
+    marginBottom: 8,
+  },
+  emptySubText: {
+    fontSize: 14,
+    color: "#888",
   },
 });
 

@@ -4,15 +4,23 @@ import Item from "../models/Item.js";
 import Shop from "../models/Shop.js";
 import authMiddleware from "../middleware/auth.js";
 import mongoose from "mongoose";
+import imagekit from "../utils/imagekit.js";
 
 const router = express.Router();
 
-// configure image uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, "uploads/"),
-  filename: (req, file, cb) => cb(null, Date.now() + "-" + file.originalname),
-});
-const upload = multer({ storage });
+// Use memory storage — files stay in buffer, no local writes
+const upload = multer({ storage: multer.memoryStorage() });
+
+// Helper: upload image buffer to ImageKit
+async function uploadToImageKit(file) {
+  const base64File = file.buffer.toString("base64");
+  const result = await imagekit.upload({
+    file: base64File,
+    fileName: Date.now() + "-" + file.originalname,
+    folder: "/super-fiesta",
+  });
+  return result.url;
+}
 
 // GET ALL ITEMS FOR CUSTOMER BROWZING (PUBLIC)
 router.get("/", async (req, res) => {
@@ -57,13 +65,23 @@ router.post(
           .json({ message: "Forbidden: You do not own this shop" });
       }
 
-      // 4. Create and save the new item
+      // 4. Upload image to ImageKit if provided
+      let imageUrl = null;
+      if (req.file) {
+        console.log("📷 File received:", req.file.originalname, req.file.size, "bytes");
+        imageUrl = await uploadToImageKit(req.file);
+        console.log("✅ ImageKit URL:", imageUrl);
+      } else {
+        console.log("⚠️ No file received in request");
+      }
+
+      // 5. Create and save the new item
       const newItem = new Item({
         name,
         price,
         description,
         stock: stock || 0,
-        image: req.file ? `/uploads/${req.file.filename}` : null,
+        image: imageUrl,
         shop: shopId, // Assign the validated shopId
       });
       await newItem.save();
@@ -91,7 +109,13 @@ router.put("/:id", authMiddleware, upload.single("image"), async (req, res) => {
     }
 
     const updates = { ...req.body };
-    if (req.file) updates.image = `/uploads/${req.file.filename}`;
+    if (req.file) {
+      console.log("📷 [Edit] File received:", req.file.originalname, req.file.size, "bytes");
+      updates.image = await uploadToImageKit(req.file);
+      console.log("✅ [Edit] ImageKit URL:", updates.image);
+    } else {
+      console.log("⚠️ [Edit] No file received in request");
+    }
 
     const updatedItem = await Item.findByIdAndUpdate(req.params.id, updates, {
       new: true,
@@ -125,7 +149,6 @@ router.delete("/:id", authMiddleware, async (req, res) => {
   }
 });
 
-// GET all items for a specific shop
 // GET all items for a specific shop
 router.get("/shop/:shopId", async (req, res) => {
   try {

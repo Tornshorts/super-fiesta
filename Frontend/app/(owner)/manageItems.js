@@ -6,14 +6,18 @@ import {
   TouchableOpacity,
   Image,
   StyleSheet,
+  ScrollView,
+  StatusBar,
 } from "react-native";
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
-import { addItem, editItem, getMyShop } from "../../api"; // import getMyShop
+import { addItem, editItem, getMyShop } from "../../api";
+import { FontAwesome } from "@expo/vector-icons";
+import { COLORS, SHADOWS } from "../../constants/theme";
 
-// Component now accepts itemToEdit and shopId
 export default function ManageItems() {
   const params = useLocalSearchParams();
+  const router = useRouter();
   const itemToEdit = params.itemToEdit ? JSON.parse(params.itemToEdit) : null;
 
   const [currentShopId, setCurrentShopId] = useState(params.shopId);
@@ -34,15 +38,13 @@ export default function ManageItems() {
       setDescription(itemToEdit.description);
       setStock(itemToEdit.stock.toString());
       if (itemToEdit.image) {
-        setImage({ uri: `http://192.168.100.5:5000${itemToEdit.image}` });
+        setImage({ uri: itemToEdit.image });
       }
     }
   }, [itemToEdit, isEditMode]);
 
   useEffect(() => {
     const fetchShopId = async () => {
-      // If shopId is not passed via params (e.g., from 'Add Shop' screen),
-      // fetch it using the dedicated endpoint.
       if (!params.shopId) {
         try {
           const shop = await getMyShop();
@@ -52,7 +54,6 @@ export default function ManageItems() {
         }
       }
     };
-
     fetchShopId();
   }, [params.shopId]);
 
@@ -67,11 +68,8 @@ export default function ManageItems() {
   };
 
   const handleSubmit = async () => {
-    if (isEditMode) {
-      handleUpdate();
-    } else {
-      handleAdd();
-    }
+    if (isEditMode) handleUpdate();
+    else handleAdd();
   };
 
   const handleAdd = async () => {
@@ -80,30 +78,21 @@ export default function ManageItems() {
         setError("Shop ID is missing. Cannot add item.");
         return;
       }
-
-      const formData = {
-        name,
-        price,
-        description,
-        stock,
-      };
+      const formData = { name, price, description, stock };
       if (image && image.uri) {
+        const uriParts = image.uri.split(".");
+        const fileExtension = uriParts[uriParts.length - 1];
+        const fileName = `photo.${fileExtension || "jpg"}`;
         formData.image = {
           uri: image.uri,
-          type: "image/jpeg", // or other appropriate mime type
-          name: image.uri.split("/").pop(),
+          type: `image/${fileExtension || "jpeg"}`,
+          name: fileName,
         };
       }
-
       const res = await addItem(currentShopId, formData);
       setMessage(res.message);
       setError("");
-      // Reset form
-      setName("");
-      setPrice("");
-      setDescription("");
-      setStock("");
-      setImage(null);
+      setName(""); setPrice(""); setDescription(""); setStock(""); setImage(null);
     } catch (err) {
       setError(err.response?.data?.message || "Failed to add item.");
     }
@@ -111,21 +100,17 @@ export default function ManageItems() {
 
   const handleUpdate = async () => {
     try {
-      const itemData = {
-        name,
-        price,
-        description,
-        stock,
-      };
-
+      const itemData = { name, price, description, stock };
       if (image && image.uri && image.uri !== itemToEdit.image) {
+        const uriParts = image.uri.split(".");
+        const fileExtension = uriParts[uriParts.length - 1];
+        const fileName = `photo.${fileExtension || "jpg"}`;
         itemData.image = {
           uri: image.uri,
-          type: "image/jpeg",
-          name: image.uri.split("/").pop(),
+          type: `image/${fileExtension || "jpeg"}`,
+          name: fileName,
         };
       }
-
       const res = await editItem(itemToEdit._id, itemData);
       setMessage(res.message);
       setError("");
@@ -136,76 +121,162 @@ export default function ManageItems() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>{isEditMode ? "Edit Item" : "Add Item"}</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Item name"
-        value={name}
-        onChangeText={setName}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Price"
-        value={price}
-        onChangeText={setPrice}
-        keyboardType="numeric"
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Stock Quantity"
-        value={stock}
-        onChangeText={setStock}
-        keyboardType="numeric"
-      />
-      <TextInput
-        style={[styles.input, styles.textarea]}
-        placeholder="Description"
-        value={description}
-        onChangeText={setDescription}
-        multiline
-      />
+      <StatusBar barStyle="light-content" />
 
-      <TouchableOpacity onPress={pickImage} style={styles.button}>
-        <Text style={styles.buttonText}>Select Image</Text>
-      </TouchableOpacity>
-      {image && (
-        <Image
-          source={{ uri: image.uri }}
-          style={{ width: 100, height: 100, marginVertical: 10 }}
-        />
-      )}
-
-      <TouchableOpacity onPress={handleSubmit} style={styles.button}>
-        <Text style={styles.buttonText}>
-          {isEditMode ? "Update Item" : "Add Item"}
+      {/* Green Header */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <FontAwesome name="chevron-left" size={18} color="#FFF" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>
+          {isEditMode ? "Edit Item" : "Add New Item"}
         </Text>
-      </TouchableOpacity>
+        <View style={{ width: 36 }} />
+      </View>
 
-      {message ? <Text style={styles.success}>{message}</Text> : null}
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.formCard}>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Item Name</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="e.g. DK8031 Maize Seeds"
+              placeholderTextColor={COLORS.textMuted}
+              value={name}
+              onChangeText={setName}
+            />
+          </View>
+
+          <View style={styles.row}>
+            <View style={[styles.inputGroup, { flex: 1, marginRight: 10 }]}>
+              <Text style={styles.label}>Price (Ksh)</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="0.00"
+                placeholderTextColor={COLORS.textMuted}
+                value={price}
+                onChangeText={setPrice}
+                keyboardType="numeric"
+              />
+            </View>
+            <View style={[styles.inputGroup, { flex: 1, marginLeft: 10 }]}>
+              <Text style={styles.label}>Stock</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="0"
+                placeholderTextColor={COLORS.textMuted}
+                value={stock}
+                onChangeText={setStock}
+                keyboardType="numeric"
+              />
+            </View>
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Description</Text>
+            <TextInput
+              style={[styles.input, styles.textarea]}
+              placeholder="Describe your item..."
+              placeholderTextColor={COLORS.textMuted}
+              value={description}
+              onChangeText={setDescription}
+              multiline
+              textAlignVertical="top"
+            />
+          </View>
+
+          <View style={styles.imageSection}>
+            <TouchableOpacity onPress={pickImage} style={styles.imageButton}>
+              <FontAwesome name="camera" size={16} color={COLORS.primary} style={{ marginRight: 8 }} />
+              <Text style={styles.imageButtonText}>
+                {image ? "Change Image" : "Select Image"}
+              </Text>
+            </TouchableOpacity>
+            {image && (
+              <Image source={{ uri: image.uri }} style={styles.previewImage} />
+            )}
+          </View>
+
+          <TouchableOpacity onPress={handleSubmit} style={styles.submitButton}>
+            <Text style={styles.submitButtonText}>
+              {isEditMode ? "Update Item" : "Create Item"}
+            </Text>
+          </TouchableOpacity>
+
+          {message ? (
+            <View style={styles.messageBox}>
+              <FontAwesome name="check-circle" size={16} color={COLORS.success} style={{ marginRight: 8 }} />
+              <Text style={styles.successText}>{message}</Text>
+            </View>
+          ) : null}
+
+          {error ? (
+            <View style={styles.errorBox}>
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          ) : null}
+        </View>
+      </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: "#fff" },
-  title: { fontSize: 22, fontWeight: "bold", marginBottom: 15 },
+  container: { flex: 1, backgroundColor: COLORS.background },
+  // ---- Header ----
+  header: {
+    backgroundColor: COLORS.primaryDark,
+    paddingTop: 50, paddingBottom: 18, paddingHorizontal: 20,
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    borderBottomLeftRadius: 24, borderBottomRightRadius: 24,
+  },
+  backBtn: { width: 36, height: 36, justifyContent: "center", alignItems: "center" },
+  headerTitle: { fontSize: 20, fontWeight: "800", color: "#FFF" },
+  // ---- Form ----
+  scrollContent: { padding: 20, paddingBottom: 100 },
+  formCard: {
+    backgroundColor: COLORS.card, borderRadius: 20,
+    padding: 20, ...SHADOWS.medium,
+  },
+  inputGroup: { marginBottom: 16 },
+  label: { fontSize: 14, fontWeight: "600", color: COLORS.primary, marginBottom: 8, marginLeft: 4 },
   input: {
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 8,
-    padding: 10,
-    marginBottom: 10,
+    borderWidth: 1.5, borderColor: COLORS.border,
+    borderRadius: 12, padding: 14, fontSize: 16,
+    backgroundColor: COLORS.surface, color: COLORS.text,
   },
-  textarea: { height: 80 },
-  button: {
-    backgroundColor: "#6200ea",
-    padding: 12,
-    borderRadius: 8,
-    alignItems: "center",
-    marginTop: 10,
+  row: { flexDirection: "row" },
+  textarea: { height: 100, paddingTop: 14 },
+  imageSection: { alignItems: "center", marginVertical: 10 },
+  imageButton: {
+    flexDirection: "row", alignItems: "center",
+    backgroundColor: COLORS.primaryLight,
+    paddingVertical: 12, paddingHorizontal: 20,
+    borderRadius: 12, marginBottom: 10,
   },
-  buttonText: { color: "#fff", fontWeight: "bold" },
-  success: { color: "green", marginTop: 15 },
-  error: { color: "red", marginTop: 15 },
+  imageButtonText: { color: COLORS.primary, fontWeight: "600" },
+  previewImage: {
+    width: "100%", height: 200, borderRadius: 12,
+    backgroundColor: COLORS.background, resizeMode: "cover",
+  },
+  submitButton: {
+    backgroundColor: COLORS.primary,
+    paddingVertical: 16, borderRadius: 16,
+    alignItems: "center", marginTop: 20,
+    ...SHADOWS.medium,
+  },
+  submitButtonText: { color: "#FFF", fontWeight: "700", fontSize: 16 },
+  messageBox: {
+    marginTop: 16, padding: 12, flexDirection: "row", alignItems: "center",
+    backgroundColor: COLORS.successLight, borderRadius: 10,
+  },
+  successText: { color: COLORS.success, fontWeight: "500" },
+  errorBox: {
+    marginTop: 16, padding: 12,
+    backgroundColor: COLORS.dangerLight, borderRadius: 10,
+  },
+  errorText: { color: COLORS.danger, fontWeight: "500", textAlign: "center" },
 });

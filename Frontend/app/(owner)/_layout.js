@@ -7,21 +7,28 @@ export default function Tablayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: "#6200ea", // Active icon/text color
-        tabBarInactiveTintColor: "#888", // Inactive color
+        tabBarActiveTintColor: "#1B5E20",
+        tabBarInactiveTintColor: "#BDBDBD",
         tabBarStyle: {
-          backgroundColor: "#fff", // White background
+          backgroundColor: "#ffffffff",
           borderTopWidth: 0,
-          elevation: 5, // Shadow for Android
-          shadowColor: "#000", // Shadow for iOS
+          elevation: 10,
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: -4 },
           shadowOpacity: 0.1,
-          shadowRadius: 5,
-          height: Platform.OS === "ios" ? 90 : 70,
+          shadowRadius: 10,
+          height: Platform.OS === "ios" ? 85 : 65,
           paddingBottom: Platform.OS === "ios" ? 25 : 10,
+          paddingTop: 10,
+          position: "absolute",
+          bottom: 20,
+          left: 20,
+          right: 20,
+          borderRadius: 25,
         },
         tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: "600",
+          fontSize: 11,
+          fontWeight: "700",
         },
       }}
     >
@@ -48,7 +55,7 @@ export default function Tablayout() {
       <Tabs.Screen
         name="addShop"
         options={{
-          title: "Create Shop",
+          title: "My Shop",
           tabBarIcon: ({ color, size }) => (
             <FontAwesome name="shopping-bag" color={color} size={size} />
           ),
@@ -62,7 +69,6 @@ export default function Tablayout() {
           tabBarIcon: ({ color, size }) => (
             <FontAwesome name="edit" color={color} size={size} />
           ),
-          // Hide this tab from the bar. We'll navigate to it programmatically.
         }}
       />
     </Tabs>

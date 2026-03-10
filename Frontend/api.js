@@ -1,9 +1,8 @@
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Platform } from "react-native";
 
-// ✅ Replace this with your actual backend IP (same one you use in Node)
-const API_BASE_URL = "http://Your_ip_here:5000/api";
-
+import { API_BASE_URL } from "./constants/Config";
 // Create axios instance
 const API = axios.create({ baseURL: API_BASE_URL });
 
@@ -13,6 +12,25 @@ API.interceptors.request.use(async (config) => {
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
+
+// Helper: append an image to FormData (works on both web and mobile)
+async function appendImageToFormData(formData, fieldName, imageValue) {
+  if (!imageValue || !imageValue.uri) return;
+
+  if (Platform.OS === "web") {
+    // Web: fetch the URI (blob: or data: URL) and convert to a real Blob
+    const response = await fetch(imageValue.uri);
+    const blob = await response.blob();
+    formData.append(fieldName, blob, imageValue.name || "photo.jpg");
+  } else {
+    // React Native mobile: the runtime handles { uri, name, type }
+    formData.append(fieldName, {
+      uri: imageValue.uri,
+      name: imageValue.name || "photo.jpg",
+      type: imageValue.type || "image/jpeg",
+    });
+  }
+}
 
 // ---------------- AUTH ---------------- //
 export const loginUser = (data) => API.post("/auth/login", data);
@@ -30,17 +48,13 @@ export const addOrUpdateShop = (data) => API.post("/shops/create", data);
 export const addItem = async (shopId, itemData) => {
   const formData = new FormData();
 
-  Object.entries(itemData).forEach(([key, value]) => {
+  for (const [key, value] of Object.entries(itemData)) {
     if (key === "image" && value) {
-      formData.append("image", {
-        uri: value.uri,
-        name: value.name,
-        type: value.type,
-      });
+      await appendImageToFormData(formData, "image", value);
     } else {
       formData.append(key, value);
     }
-  });
+  }
 
   const res = await API.post(`/items/${shopId}`, formData, {
     headers: { "Content-Type": "multipart/form-data" },
@@ -51,17 +65,13 @@ export const addItem = async (shopId, itemData) => {
 export const editItem = async (id, itemData) => {
   const formData = new FormData();
 
-  Object.entries(itemData).forEach(([key, value]) => {
+  for (const [key, value] of Object.entries(itemData)) {
     if (key === "image" && value) {
-      formData.append("image", {
-        uri: value.uri,
-        name: value.name,
-        type: value.type,
-      });
+      await appendImageToFormData(formData, "image", value);
     } else {
       formData.append(key, value);
     }
-  });
+  }
 
   const res = await API.put(`/items/${id}`, formData, {
     headers: { "Content-Type": "multipart/form-data" },

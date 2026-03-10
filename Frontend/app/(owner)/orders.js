@@ -6,10 +6,13 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   Alert,
+  StatusBar,
 } from "react-native";
 import React, { useState } from "react";
 import { useFocusEffect } from "expo-router";
 import { getMyShop, getShopOrders, updateOrderStatus } from "../../api";
+import { FontAwesome } from "@expo/vector-icons";
+import { COLORS, SHADOWS } from "../../constants/theme";
 
 const OwnerOrders = () => {
   const [orders, setOrders] = useState([]);
@@ -43,74 +46,105 @@ const OwnerOrders = () => {
     try {
       await updateOrderStatus(orderId, newStatus);
       Alert.alert("Success", "Order status updated!");
-      fetchShopAndOrders(); // Refresh the list
+      fetchShopAndOrders();
     } catch (err) {
       Alert.alert("Error", "Failed to update status.");
     }
   };
 
+  const getStatusColor = (status) => {
+    const colors = {
+      pending: COLORS.warning,
+      confirmed: COLORS.info,
+      shipped: "#3F51B5",
+      delivered: COLORS.success,
+      cancelled: COLORS.danger,
+    };
+    return colors[status] || COLORS.textMuted;
+  };
+
   if (loading) {
-    return <ActivityIndicator size="large" style={styles.centered} />;
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+      </View>
+    );
   }
 
   if (error) {
-    return <Text style={[styles.centered, styles.error]}>{error}</Text>;
+    return (
+      <View style={styles.centered}>
+        <Text style={styles.errorText}>{error}</Text>
+      </View>
+    );
   }
 
   const renderOrderItem = ({ item }) => (
-    <View style={styles.orderContainer}>
-      <View style={styles.orderHeader}>
-        <Text style={styles.orderId}>Order #{item._id.substring(0, 8)}</Text>
-        <Text style={styles.orderDate}>
-          {new Date(item.createdAt).toLocaleDateString()}
-        </Text>
+    <View style={styles.card}>
+      <View style={styles.cardHeader}>
+        <Text style={styles.orderId}>#{item._id.substring(0, 8)}</Text>
+        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) + "22" }]}>
+          <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>
+            {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
+          </Text>
+        </View>
       </View>
-      <Text style={styles.customerInfo}>
-        Customer: {item.customer?.email || "N/A"}
+
+      <View style={styles.customerRow}>
+        <FontAwesome name="user-o" size={13} color={COLORS.textMuted} style={{ marginRight: 6 }} />
+        <Text style={styles.customerEmail}>{item.customer?.email || "N/A"}</Text>
+      </View>
+
+      <Text style={styles.dateText}>
+        {new Date(item.createdAt).toLocaleDateString()}
       </Text>
 
+      <View style={styles.divider} />
+
       {item.items.map((product) => (
-        <View key={product._id} style={styles.productItem}>
-          <Text>
-            {product.name} (x{product.quantity})
+        <View key={product._id} style={styles.productRow}>
+          <Text style={styles.productName}>
+            {product.name} <Text style={styles.productQty}>×{product.quantity}</Text>
           </Text>
-          <Text>Ksh {product.price * product.quantity}</Text>
+          <Text style={styles.productPrice}>Ksh {product.price * product.quantity}</Text>
         </View>
       ))}
 
-      <View style={styles.orderFooter}>
-        <Text style={styles.totalAmount}>Total: Ksh {item.totalAmount}</Text>
-        <Text style={[styles.status, styles[`status_${item.status}`]]}>
-          {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
-        </Text>
+      <View style={styles.divider} />
+
+      <View style={styles.totalRow}>
+        <Text style={styles.totalLabel}>Total</Text>
+        <Text style={styles.totalAmount}>Ksh {item.totalAmount}</Text>
       </View>
 
-      <View style={styles.actionsContainer}>
+      <View style={styles.actionsRow}>
         {item.status === "pending" && (
           <TouchableOpacity
-            style={[styles.actionButton, styles.confirmButton]}
+            style={[styles.actionButton, { backgroundColor: COLORS.successLight }]}
             onPress={() => handleStatusUpdate(item._id, "confirmed")}
           >
-            <Text style={styles.actionButtonText}>Confirm</Text>
+            <FontAwesome name="check" size={14} color={COLORS.success} style={{ marginRight: 6 }} />
+            <Text style={[styles.actionText, { color: COLORS.success }]}>Confirm</Text>
           </TouchableOpacity>
         )}
         {item.status === "confirmed" && (
           <TouchableOpacity
-            style={[styles.actionButton, styles.shipButton]}
+            style={[styles.actionButton, { backgroundColor: COLORS.infoLight }]}
             onPress={() => handleStatusUpdate(item._id, "shipped")}
           >
-            <Text style={styles.actionButtonText}>Ship Order</Text>
+            <FontAwesome name="truck" size={14} color={COLORS.info} style={{ marginRight: 6 }} />
+            <Text style={[styles.actionText, { color: COLORS.info }]}>Ship</Text>
           </TouchableOpacity>
         )}
         {item.status === "shipped" && (
           <TouchableOpacity
-            style={[styles.actionButton, styles.deliverButton]}
+            style={[styles.actionButton, { backgroundColor: COLORS.primaryLight }]}
             onPress={() => handleStatusUpdate(item._id, "delivered")}
           >
-            <Text style={styles.actionButtonText}>Mark as Delivered</Text>
+            <FontAwesome name="flag-checkered" size={14} color={COLORS.primary} style={{ marginRight: 6 }} />
+            <Text style={[styles.actionText, { color: COLORS.primary }]}>Delivered</Text>
           </TouchableOpacity>
         )}
-        {/* No action shown for delivered or cancelled orders */}
         {(item.status === "delivered" || item.status === "cancelled") && (
           <Text style={styles.noActionText}>No further actions</Text>
         )}
@@ -120,13 +154,21 @@ const OwnerOrders = () => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Incoming Orders</Text>
+      <StatusBar barStyle="light-content" />
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Incoming Orders</Text>
+      </View>
       <FlatList
         data={orders}
         renderItem={renderOrderItem}
         keyExtractor={(item) => item._id}
+        contentContainerStyle={styles.listContent}
         ListEmptyComponent={
-          <Text style={styles.centered}>You have no incoming orders.</Text>
+          <View style={styles.emptyContainer}>
+            <FontAwesome name="inbox" size={40} color={COLORS.textMuted} />
+            <Text style={styles.emptyText}>No orders yet</Text>
+            <Text style={styles.emptySubText}>Orders from customers will appear here</Text>
+          </View>
         }
       />
     </View>
@@ -134,61 +176,52 @@ const OwnerOrders = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: "#f8f9fa" },
-  centered: { flex: 1, textAlign: "center", marginTop: 50 },
-  title: { fontSize: 28, fontWeight: "bold", marginBottom: 20 },
-  error: { color: "red" },
-  orderContainer: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 15,
-    marginBottom: 15,
-    elevation: 3,
+  container: { flex: 1, backgroundColor: COLORS.background },
+  centered: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: COLORS.background },
+  header: {
+    backgroundColor: COLORS.primaryDark,
+    paddingTop: 50, paddingBottom: 18, paddingHorizontal: 20,
+    borderBottomLeftRadius: 24, borderBottomRightRadius: 24,
   },
-  orderHeader: { flexDirection: "row", justifyContent: "space-between" },
-  orderId: { fontWeight: "bold", fontSize: 16 },
-  orderDate: { color: "#6c757d" },
-  customerInfo: { fontStyle: "italic", color: "#333", marginVertical: 8 },
-  productItem: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingVertical: 4,
-    borderBottomWidth: 1,
-    borderBottomColor: "#eee",
+  headerTitle: { fontSize: 22, fontWeight: "800", color: "#FFF" },
+  listContent: { padding: 20, paddingBottom: 100 },
+  card: {
+    backgroundColor: COLORS.card, borderRadius: 16, padding: 16,
+    marginBottom: 14, ...SHADOWS.small,
   },
-  orderFooter: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 10,
+  cardHeader: {
+    flexDirection: "row", justifyContent: "space-between",
+    alignItems: "center", marginBottom: 8,
   },
-  totalAmount: { fontWeight: "bold", fontSize: 16 },
-  status: {
-    fontWeight: "bold",
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 10,
-    color: "#fff",
-    overflow: "hidden",
+  orderId: { fontWeight: "700", fontSize: 16, color: COLORS.text },
+  statusBadge: { paddingHorizontal: 12, paddingVertical: 4, borderRadius: 20 },
+  statusText: { fontSize: 12, fontWeight: "700" },
+  customerRow: { flexDirection: "row", alignItems: "center", marginBottom: 4 },
+  customerEmail: { fontSize: 13, color: COLORS.textSecondary },
+  dateText: { fontSize: 12, color: COLORS.textMuted, marginBottom: 10 },
+  divider: { height: 1, backgroundColor: COLORS.divider, marginVertical: 10 },
+  productRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 4 },
+  productName: { fontSize: 14, color: COLORS.text },
+  productQty: { color: COLORS.textMuted },
+  productPrice: { fontSize: 14, color: COLORS.text, fontWeight: "500" },
+  totalRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  totalLabel: { fontSize: 14, color: COLORS.textMuted },
+  totalAmount: { fontWeight: "800", fontSize: 18, color: COLORS.text },
+  actionsRow: {
+    flexDirection: "row", justifyContent: "flex-end",
+    marginTop: 12, paddingTop: 12,
+    borderTopWidth: 1, borderTopColor: COLORS.divider,
   },
-  status_pending: { backgroundColor: "#ffc107" },
-  status_confirmed: { backgroundColor: "#17a2b8" },
-  status_shipped: { backgroundColor: "#007bff" },
-  status_delivered: { backgroundColor: "#28a745" },
-  status_cancelled: { backgroundColor: "#dc3545" },
-  actionsContainer: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    marginTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: "#eee",
-    paddingTop: 10,
+  actionButton: {
+    flexDirection: "row", alignItems: "center",
+    paddingVertical: 8, paddingHorizontal: 16, borderRadius: 12,
   },
-  actionButton: { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 6 },
-  actionButtonText: { color: "#fff", fontWeight: "bold" },
-  confirmButton: { backgroundColor: "#28a745" },
-  shipButton: { backgroundColor: "#007bff" },
-  deliverButton: { backgroundColor: "#17a2b8" },
-  noActionText: { color: "#6c757d", fontStyle: "italic" },
+  actionText: { fontWeight: "600", fontSize: 14 },
+  noActionText: { color: COLORS.textMuted, fontStyle: "italic", fontSize: 13 },
+  errorText: { color: COLORS.danger, fontSize: 16, fontWeight: "600" },
+  emptyContainer: { alignItems: "center", marginTop: 60 },
+  emptyText: { fontSize: 20, fontWeight: "700", color: COLORS.text, marginTop: 16, marginBottom: 6 },
+  emptySubText: { fontSize: 14, color: COLORS.textMuted },
 });
 
 export default OwnerOrders;

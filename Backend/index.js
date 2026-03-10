@@ -21,7 +21,7 @@ mongoose
   .then(() => console.log("✅ MongoDB Connected"))
   .catch((err) => console.error("❌ MongoDB Error:", err));
 
-app.use("/uploads", express.static("uploads"));
+// Images are now served from ImageKit CDN — no local static serving needed
 app.use("/api/auth", authRoutes);
 app.use("/api/shops", shopRoutes);
 app.use("/api/products", productRoutes);

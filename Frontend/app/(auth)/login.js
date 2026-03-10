@@ -1,17 +1,22 @@
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Formik } from "formik";
-import React from "react";
+import React, { useState } from "react";
 import {
   StyleSheet,
   Text,
   TextInput,
-  Touchable,
   TouchableOpacity,
   View,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StatusBar,
 } from "react-native";
 import * as Yup from "yup";
 import { loginUser } from "../../api";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { FontAwesome } from "@expo/vector-icons";
+import { COLORS, SHADOWS } from "../../constants/theme";
 
 const validationSchema = Yup.object().shape({
   email: Yup.string().required("Email is required").email().label("Email"),
@@ -21,155 +26,289 @@ const validationSchema = Yup.object().shape({
     .label("Password"),
 });
 
-const login = () => {
+const Login = () => {
   const router = useRouter();
   const { role } = useLocalSearchParams();
+  const [showPassword, setShowPassword] = useState(false);
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>
-        Login as {role === "owner" ? "store owner" : "Customer"}
-      </Text>
-
-      {/*Formik Integration */}
-      <Formik
-        initialValues={{
-          email: "",
-          password: "",
-        }}
-        onSubmit={async (values) => {
-          try {
-            const res = await loginUser(values);
-
-            // axios returns data on res.data
-            const { token, user } = res.data || {};
-            if (!token || !user) {
-              throw new Error("Invalid login response");
-            }
-            // Save token + user info
-            await AsyncStorage.setItem("token", token);
-            await AsyncStorage.setItem("user", JSON.stringify(user));
-            console.log("✅ Token saved:", token);
-
-            if (role === "owner") router.push("/dashboard");
-            else router.push("/home");
-          } catch (err) {
-            console.error(
-              "❌ Login failed:",
-              err.response?.data || err.message
-            );
-          }
-        }}
-        validationSchema={validationSchema}
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
+      <StatusBar barStyle="light-content" />
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
       >
-        {({
-          handleChange,
-          handleBlur,
-          handleSubmit,
-          values,
-          errors,
-          touched,
-        }) => (
-          <View style={styles.form}>
-            <TextInput
-              style={styles.input}
-              placeholder="Email"
-              onChangeText={handleChange("email")}
-              onBlur={handleBlur("email")}
-              value={values.email}
-              keyboardType="email-address"
-            />
-            {/*Errors */}
-            {errors.email && touched.email && (
-              <Text style={styles.errorText}>{errors.email}</Text>
-            )}
+        {/* Green Header */}
+        <View style={styles.headerSection}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => router.back()}
+          >
+            <FontAwesome name="chevron-left" size={18} color="#FFF" />
+          </TouchableOpacity>
 
-            <TextInput
-              style={styles.input}
-              placeholder="Password"
-              onChangeText={handleChange("password")}
-              onBlur={handleBlur("password")}
-              value={values.password}
-              secureTextEntry
-            />
-            {/*Errors */}
-            {errors.password && touched.password && (
-              <Text style={styles.errorText}>{errors.password}</Text>
-            )}
-
-            {/* Login */}
-            <TouchableOpacity onPress={handleSubmit}>
-              <View style={styles.button}>
-                <Text style={styles.buttonText}>Login</Text>
+          <View style={styles.headerBottom}>
+            <View style={styles.titleRow}>
+              <Text style={styles.brandName}>Mkulima</Text>
+              <View style={[styles.roleBadge, role === "owner" ? styles.ownerBadge : styles.customerBadge]}>
+                <Text style={{ fontSize: 12 }}>{role === "owner" ? "🏪" : "🛒"}</Text>
+                <Text style={styles.roleBadgeText}>
+                  {role === "owner" ? "Store Owner" : "Customer"}
+                </Text>
               </View>
-            </TouchableOpacity>
+            </View>
+            <Text style={styles.welcomeTitle}>Welcome back!</Text>
+            <Text style={styles.welcomeSubtitle}>Sign in to continue to Mkulima</Text>
           </View>
-        )}
-      </Formik>
+        </View>
 
-      <TouchableOpacity
-        style={styles.switchButton}
-        onPress={() =>
-          router.push({ pathname: "/(auth)/register", params: { role } })
-        }
-      >
-        <Text style={styles.switchButtonText}>
-          Don't have an account? Register
-        </Text>
-      </TouchableOpacity>
-    </View>
+        {/* Form */}
+        <View style={styles.formSection}>
+          <Formik
+            initialValues={{ email: "", password: "" }}
+            onSubmit={async (values) => {
+              try {
+                const res = await loginUser(values);
+                const { token, user } = res.data || {};
+                if (!token || !user) {
+                  throw new Error("Invalid login response");
+                }
+                await AsyncStorage.setItem("token", token);
+                await AsyncStorage.setItem("user", JSON.stringify(user));
+
+                if (role === "owner") router.push("/dashboard");
+                else router.push("/home");
+              } catch (err) {
+                console.error("❌ Login failed:", err.response?.data || err.message);
+              }
+            }}
+            validationSchema={validationSchema}
+          >
+            {({
+              handleChange,
+              handleBlur,
+              handleSubmit,
+              values,
+              errors,
+              touched,
+            }) => (
+              <>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Email Address</Text>
+                  <View style={styles.inputWrapper}>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="you@example.com"
+                      placeholderTextColor={COLORS.textMuted}
+                      onChangeText={handleChange("email")}
+                      onBlur={handleBlur("email")}
+                      value={values.email}
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                    />
+                  </View>
+                  {errors.email && touched.email && (
+                    <Text style={styles.errorText}>{errors.email}</Text>
+                  )}
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Password</Text>
+                  <View style={styles.inputWrapper}>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Min. 6 characters"
+                      placeholderTextColor={COLORS.textMuted}
+                      onChangeText={handleChange("password")}
+                      onBlur={handleBlur("password")}
+                      value={values.password}
+                      secureTextEntry={!showPassword}
+                    />
+                    <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                      <FontAwesome
+                        name={showPassword ? "eye-slash" : "eye"}
+                        size={18}
+                        color={COLORS.textMuted}
+                      />
+                    </TouchableOpacity>
+                  </View>
+                  {errors.password && touched.password && (
+                    <Text style={styles.errorText}>{errors.password}</Text>
+                  )}
+                </View>
+
+                <TouchableOpacity
+                  style={styles.submitButton}
+                  onPress={handleSubmit}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.submitButtonText}>Sign In</Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </Formik>
+
+          <TouchableOpacity
+            style={styles.switchButton}
+            onPress={() =>
+              router.push({ pathname: "/(auth)/register", params: { role } })
+            }
+          >
+            <Text style={styles.switchText}>
+              Don't have an account?{" "}
+              <Text style={styles.switchLink}>Register</Text>
+            </Text>
+          </TouchableOpacity>
+
+          
+          
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 };
 
-export default login;
+export default Login;
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: COLORS.background,
+  },
+  scrollContent: {
+    flexGrow: 1,
+  },
+  // ---- Header ----
+  headerSection: {
+    backgroundColor: COLORS.primaryDark,
+    paddingTop: 50,
+    paddingBottom: 30,
+    paddingHorizontal: 24,
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
+  },
+  backButton: {
+    width: 36,
+    height: 36,
     justifyContent: "center",
     alignItems: "center",
-    padding: 16,
-    backgroundColor: "#f5f5f5",
+    marginBottom: 12,
   },
-  title: {
-    fontSize: 32,
-    fontWeight: "bold",
-    marginBottom: 24,
+  headerBottom: {},
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 8,
   },
-  form: {
-    width: "100%",
+  brandName: {
+    fontSize: 28,
+    fontWeight: "900",
+    color: "#FFF",
+  },
+  roleBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 12,
+    gap: 4,
+  },
+  ownerBadge: {
+    backgroundColor: COLORS.accent,
+  },
+  customerBadge: {
+    backgroundColor: COLORS.accent,
+  },
+  roleBadgeText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#FFF",
+  },
+  welcomeTitle: {
+    fontSize: 26,
+    fontWeight: "800",
+    color: COLORS.accent,
+    marginBottom: 4,
+  },
+  welcomeSubtitle: {
+    fontSize: 14,
+    color: "rgba(255,255,255,0.7)",
+    fontWeight: "500",
+  },
+  // ---- Form ----
+  formSection: {
+    paddingHorizontal: 24,
+    paddingTop: 28,
+  },
+  inputGroup: {
+    marginBottom: 20,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: COLORS.primary,
+    marginBottom: 8,
+    marginLeft: 2,
+  },
+  inputWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
+    borderRadius: 14,
+    backgroundColor: COLORS.card,
+    paddingHorizontal: 16,
   },
   input: {
-    height: 50,
-    borderColor: "#ccc",
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    marginBottom: 16,
-    backgroundColor: "#fff",
+    flex: 1,
+    height: 52,
+    fontSize: 16,
+    color: COLORS.text,
   },
   errorText: {
-    color: "red",
-    marginBottom: 16,
+    color: COLORS.danger,
+    fontSize: 12,
+    marginTop: 6,
+    marginLeft: 4,
   },
-  button: {
-    height: 50,
-    backgroundColor: "#6200ea",
-    justifyContent: "center",
+  submitButton: {
+    backgroundColor: COLORS.primary,
+    paddingVertical: 16,
+    borderRadius: 16,
     alignItems: "center",
-    borderRadius: 8,
-    marginTop: 16,
+    marginTop: 8,
+    ...SHADOWS.medium,
   },
-  buttonText: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "bold",
+  submitButtonText: {
+    color: "#FFF",
+    fontSize: 17,
+    fontWeight: "700",
   },
   switchButton: {
     marginTop: 20,
+    alignItems: "center",
   },
-  switchButtonText: {
-    color: "#6200ea",
-    fontSize: 16,
+  switchText: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+  },
+  switchLink: {
+    color: COLORS.primary,
+    fontWeight: "700",
+  },
+  demoHint: {
+    marginTop: 24,
+    backgroundColor: COLORS.accentLight,
+    borderRadius: 12,
+    padding: 14,
+    alignItems: "center",
+  },
+  demoHintText: {
+    fontSize: 13,
+    color: COLORS.textSecondary,
   },
 });
